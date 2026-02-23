@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .phone {
+    background: linear-gradient(160deg, #2a2a4a 0%, #1a1a30 50%, #111128 100%);
+    border-radius: 36px;
+    padding: 20px 16px 30px;
+    box-shadow:
+      0 0 0 2px #3a3a6a,
+      0 0 0 4px #111128,
+      0 30px 80px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.1);
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand {
+    color: #7070b0;
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .screen-bezel {
+    background: #111;
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow:
+      inset 0 2px 8px rgba(0,0,0,0.8),
+      0 0 0 1px #000;
+    width: 100%;
+  }
+
+  .screen {
+    background: #8bac0f;
+    border-radius: 4px;
+    padding: 8px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #306230;
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    padding: 0 2px;
+  }
+
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  .message {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 172, 15, 0.9);
+    color: #306230;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-align: center;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .message .title {
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 3px;
+  }
+
+  .message .subtitle {
+    font-size: 9px;
+    opacity: 0.8;
+  }
+
+  .keypad {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: repeat(3, 44px);
+    gap: 3px;
+  }
+
+  .key {
+    background: linear-gradient(180deg, #3a3a6a 0%, #252545 100%);
+    border-radius: 8px;
+    border: none;
+    color: #9090c0;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 3px 0 #111,
+      inset 0 1px 0 rgba(255,255,255,0.1);
+    transition: transform 0.08s, box-shadow 0.08s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .key:active, .key.pressed {
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 0 #111,
+      inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  .key.center {
+    background: linear-gradient(180deg, #5a3a8a 0%, #3a2560 100%);
+    color: #c0a0f0;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .key.empty { visibility: hidden; }
+
+  .bottom-keys {
+    display: flex;
+    gap: 8px;
+  }
+
+  .key.wide {
+    width: 80px;
+    height: 36px;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="brand">NOKIA</div>
+
+  <div class="screen-bezel">
+    <div class="screen">
+      <div class="hud">
+        <span>SCORE: <span id="score">0</span></span>
+        <span>BEST: <span id="best">0</span></span>
+      </div>
+      <canvas id="canvas" width="280" height="200"></canvas>
+      <div class="message" id="message">
+        <div class="title">SNAKE</div>
+        <div>PRESS CENTER</div>
+        <div class="subtitle">USE D-PAD TO MOVE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="keypad">
+    <div class="dpad">
+      <button class="key empty"></button>
+      <button class="key" id="btn-up">▲</button>
+      <button class="key empty"></button>
+      <button class="key" id="btn-left">◄</button>
+      <button class="key center" id="btn-center">OK</button>
+      <button class="key" id="btn-right">►</button>
+      <button class="key empty"></button>
+      <button class="key" id="btn-down">▼</button>
+      <button class="key empty"></button>
+    </div>
+    <div class="bottom-keys">
+      <button class="key wide" id="btn-pause">PAUSE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const msgEl = document.getElementById('message');
+
+const COLS = 28, ROWS = 20;
+const CW = canvas.width / COLS, CH = canvas.height / ROWS;
+
+const COLORS = {
+  bg: '#9bbc0f',
+  grid: '#8bac0f',
+  snake: '#0f380f',
+  head: '#0f380f',
+  food: '#306230',
+  dead: '#306230'
+};
+
+let snake, dir, nextDir, food, score, best = 0, state = 'menu', paused = false;
+let interval;
+
+function initGame() {
+  snake = [
+    {x: 14, y: 10},
+    {x: 13, y: 10},
+    {x: 12, y: 10},
+  ];
+  dir = {x: 1, y: 0};
+  nextDir = {x: 1, y: 0};
+  score = 0;
+  scoreEl.textContent = 0;
+  placeFood();
+}
+
+function placeFood() {
+  let pos;
+  do {
+    pos = {x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS)};
+  } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+  food = pos;
+}
+
+function gameLoop() {
+  if (paused || state !== 'playing') return;
+
+  dir = nextDir;
+  const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+  // Wall collision
+  if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+    gameOver(); return;
+  }
+
+  // Self collision
+  if (snake.some(s => s.x === head.x && s.y === head.y)) {
+    gameOver(); return;
+  }
+
+  snake.unshift(head);
+
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    scoreEl.textContent = score;
+    if (score > best) { best = score; bestEl.textContent = best; }
+    placeFood();
+    // Speed up
+    clearInterval(interval);
+    interval = setInterval(gameLoop, Math.max(80, 200 - score * 5));
+  } else {
+    snake.pop();
+  }
+
+  draw();
+}
+
+function draw() {
+  // Background
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Subtle grid
+  ctx.fillStyle = COLORS.grid;
+  for (let x = 0; x < COLS; x++) {
+    for (let y = 0; y < ROWS; y++) {
+      if ((x + y) % 2 === 0) {
+        ctx.fillRect(x * CW, y * CH, CW, CH);
+      }
+    }
+  }
+
+  // Food - blinking square
+  ctx.fillStyle = COLORS.food;
+  const p = 1;
+  ctx.fillRect(food.x * CW + p, food.y * CH + p, CW - p*2, CH - p*2);
+
+  // Snake body
+  snake.forEach((seg, i) => {
+    ctx.fillStyle = i === 0 ? COLORS.head : COLORS.snake;
+    const pad = i === 0 ? 0 : 1;
+    ctx.fillRect(seg.x * CW + pad, seg.y * CH + pad, CW - pad*2, CH - pad*2);
+
+    // Eyes on head
+    if (i === 0) {
+      ctx.fillStyle = COLORS.bg;
+      const ex = seg.x * CW, ey = seg.y * CH;
+      if (dir.x === 1) { ctx.fillRect(ex+CW-3, ey+2, 2, 2); ctx.fillRect(ex+CW-3, ey+CH-4, 2, 2); }
+      else if (dir.x === -1) { ctx.fillRect(ex+1, ey+2, 2, 2); ctx.fillRect(ex+1, ey+CH-4, 2, 2); }
+      else if (dir.y === -1) { ctx.fillRect(ex+2, ey+1, 2, 2); ctx.fillRect(ex+CW-4, ey+1, 2, 2); }
+      else { ctx.fillRect(ex+2, ey+CH-3, 2, 2); ctx.fillRect(ex+CW-4, ey+CH-3, 2, 2); }
+    }
+  });
+}
+
+function gameOver() {
+  state = 'dead';
+  clearInterval(interval);
+  draw();
+  setTimeout(() => {
+    msgEl.innerHTML = `<div class="title">GAME OVER</div><div>SCORE: ${score}</div><div>PRESS CENTER</div><div class="subtitle">TO PLAY AGAIN</div>`;
+    msgEl.style.display = 'flex';
+  }, 400);
+}
+
+function startGame() {
+  msgEl.style.display = 'none';
+  initGame();
+  state = 'playing';
+  paused = false;
+  clearInterval(interval);
+  interval = setInterval(gameLoop, 200);
+  draw();
+}
+
+function setDir(dx, dy) {
+  if (state !== 'playing') return;
+  // Prevent reversing
+  if (dx !== 0 && dir.x !== 0) return;
+  if (dy !== 0 && dir.y !== 0) return;
+  nextDir = {x: dx, y: dy};
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  switch(e.key) {
+    case 'ArrowUp':    e.preventDefault(); setDir(0, -1); break;
+    case 'ArrowDown':  e.preventDefault(); setDir(0, 1); break;
+    case 'ArrowLeft':  e.preventDefault(); setDir(-1, 0); break;
+    case 'ArrowRight': e.preventDefault(); setDir(1, 0); break;
+    case 'Enter': case ' ':
+      if (state === 'menu' || state === 'dead') startGame();
+      break;
+    case 'p': case 'P':
+      togglePause(); break;
+  }
+});
+
+// D-pad buttons
+function btnPress(btn, action) {
+  btn.addEventListener('pointerdown', e => { e.preventDefault(); btn.classList.add('pressed'); action(); });
+  btn.addEventListener('pointerup', () => btn.classList.remove('pressed'));
+  btn.addEventListener('pointerleave', () => btn.classList.remove('pressed'));
+}
+
+btnPress(document.getElementById('btn-up'),    () => setDir(0, -1));
+btnPress(document.getElementById('btn-down'),  () => setDir(0, 1));
+btnPress(document.getElementById('btn-left'),  () => setDir(-1, 0));
+btnPress(document.getElementById('btn-right'), () => setDir(1, 0));
+btnPress(document.getElementById('btn-center'), () => {
+  if (state === 'menu' || state === 'dead') startGame();
+});
+
+function togglePause() {
+  if (state !== 'playing') return;
+  paused = !paused;
+  if (paused) {
+    msgEl.innerHTML = `<div class="title">PAUSED</div><div>PRESS PAUSE</div><div class="subtitle">TO CONTINUE</div>`;
+    msgEl.style.display = 'flex';
+  } else {
+    msgEl.style.display = 'none';
+  }
+}
+
+document.getElementById('btn-pause').addEventListener('click', togglePause);
+
+// Initial draw
+ctx.fillStyle = COLORS.bg;
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+</script>
+</body>
+</html>
